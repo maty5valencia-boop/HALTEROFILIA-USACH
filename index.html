@@ -336,51 +336,6 @@ function plateHTML(total,bar=20,collars=true){if(total==null||isNaN(total))retur
 function spark(pts,{h=70,color='#ff5a1f',ref=null}={}){if(!pts||pts.length<2)return`<div class="mut xs">Se necesitan al menos 2 registros para el gráfico.</div>`;const xs=pts.map(p=>+dt(p.x)),ys=pts.map(p=>p.y);let mn=Math.min(...ys),mx=Math.max(...ys);if(ref!=null){mn=Math.min(mn,ref);mx=Math.max(mx,ref)}if(mx===mn){mx+=1;mn-=1}const pad=(mx-mn)*.1;mn-=pad;mx+=pad;const x0=Math.min(...xs),x1=Math.max(...xs);const W=300;const X=x=>x1===x0?W/2:(x-x0)/(x1-x0)*(W-8)+4;const Y=y=>h-4-(y-mn)/(mx-mn)*(h-8);
  return`<svg viewBox="0 0 ${W} ${h}" preserveAspectRatio="none" style="width:100%;height:${h}px;display:block">${ref!=null?`<line x1="0" x2="${W}" y1="${Y(ref)}" y2="${Y(ref)}" stroke="#ff4d4f" stroke-dasharray="5 4" stroke-width="1.5" vector-effect="non-scaling-stroke"/>`:''}<polyline fill="none" stroke="${color}" stroke-width="2.5" stroke-linejoin="round" vector-effect="non-scaling-stroke" points="${pts.map(p=>X(+dt(p.x)).toFixed(1)+','+Y(p.y).toFixed(1)).join(' ')}"/></svg>`}
 function project(a,ex){const cur=a?.rms?.[ex];if(!cur)return null;const lim=+dt(addDays(ymd(),-365));const pts=(a.rmHist||[]).filter(p=>p.ex===ex&&+dt(p.d)>=lim);if(pts.length<2)return{cur,slope:null};const xs=pts.map(p=>+dt(p.d)/864e5),ys=pts.map(p=>p.kg);const mx=xs.reduce((s,v)=>s+v,0)/xs.length,my=ys.reduce((s,v)=>s+v,0)/ys.length;let nu=0,de=0;xs.forEach((x,i)=>{nu+=(x-mx)*(ys[i]-my);de+=(x-mx)**2});const slope=de?nu/de:0;const p12=Math.min(cur+Math.max(0,slope*84),cur*1.12);return{cur,slope,p12:rnd(p12,a.step||1)}}
-const VK={arr:'arranque',env:'envion',cl:'cargada',jk:'jerk',sf:'sfrontal',apar:'arrparado',afza:'arrfza',acolg:'arrcolg',asop:'arrsop',hA:'tarranque',ohs:'ohs',cpar:'cleanparado',ccolg:'cleancolg',csop:'cleansop',hC:'tenvion',jdet:'jerkdet',emp:'empuje',pp:'pushpress',pullWord:'halón'};
-/* ===== análisis de variantes (mismo motor en USACH y Halteros; VK traduce los nombres de cada app) ===== */
-const VR_RANGES=[['apar','arr',78,88],['afza','arr',78,88],['acolg','arr',88,97],['asop','arr',92,102],['hA','arr',108,125],['ohs','arr',105,140],
- ['cpar','cl',78,88],['ccolg','cl',88,97],['csop','cl',92,102],['hC','cl',108,125],['cl','sf',85,92],
- ['jdet','jk',100,108],['emp','jk',88,96],['pp','jk',75,85]];
-const vkey=(r,k)=>k==='jk'?(VK.jkAlt&&r[VK.jkAlt]?VK.jkAlt:VK.jk):VK[k];
-function varRows(r){return VR_RANGES.map(([v,b,lo,hi])=>{const kv=vkey(r,v),kb=vkey(r,b);return[EXN[kv]+' / '+EXN[kb],r[kv],r[kb],lo,hi]}).filter(x=>x[1]&&x[2])}
-function varAnalysis(r,w,F){
- const vq=k=>{const x=VR_RANGES.find(y=>y[0]===k);if(!x)return null;const a=r[vkey(r,k)],b=r[vkey(r,x[1])];if(!a||!b)return null;const q=Math.round(a/b*100);return{q,s:q<x[2]?'lo':q>x[3]?'hi':'ok',lo:x[2],hi:x[3]}};
- const v=k=>vq(k)||{s:null},has=(...k)=>k.some(x=>vq(x)),pq=k=>{const x=vq(k);return x?x.q+'%':''},nm=k=>EXN[vkey(r,k)].toLowerCase();
- const sv=(...k)=>Math.max(0,...k.map(x=>{const y=vq(x);return y?Math.max(y.lo-y.q,y.q-y.hi):0}))>5?2:1;
- const lst=(ks,st)=>ks.filter(k=>v(k).s===st).map(k=>nm(k)+' '+pq(k)).join(', ');
- const fam=(icon,title,list,okTxt)=>{const on=list.filter(x=>x.on);if(!on.length){if(list.filter(x=>x.has).length>=2)F.push(okTxt);return}
-  w(on.some(x=>x.sev>1)?2:1,icon,title,on.map(x=>x.t).join(' '),[...new Set(on.flatMap(x=>x.ej))].slice(0,5))};
- const H=VK.pullWord||'halón';
- // ARRANQUE
- const aRec=['apar','afza'].filter(k=>v(k).s==='hi'),aPull=['asop','acolg'].filter(k=>v(k).s==='hi'),aPow=['apar','afza','asop','acolg'].filter(k=>v(k).s==='lo');
- fam('🏋️','Arranque: dónde se pierden los kilos',[
-  {has:has('apar','afza'),on:aRec.length>0,sev:sv(...aRec),t:'Tus variantes sin sentadilla están muy cerca de tu arranque ('+lst(['apar','afza'],'hi')+'): potencia tienes; el límite es meterte abajo y recibir en sentadilla.',ej:['Sentadilla de arranque','Arranque con pausa abajo','Movilidad de tobillo y hombro']},
-  {has:has('asop','acolg'),on:aPull.length>0,sev:sv(...aPull),t:'Desde arriba levantas casi lo mismo o más que desde el piso ('+lst(['asop','acolg'],'hi')+'): el despegue y el paso por la rodilla te quitan kilos.',ej:['Arranque con pausa bajo la rodilla',H[0].toUpperCase()+H.slice(1)+' de arranque desde el piso','Peso muerto de arranque']},
-  {has:false,on:aPow.length>0,sev:sv(...aPow),t:'Tus variantes de potencia están bajas ('+lst(['apar','afza','asop','acolg'],'lo')+'): falta explosividad en la extensión final.',ej:[EXN[vkey(r,'apar')]||'Arranque parado','Arranque colgante','Saltos']},
-  {has:has('ohs'),on:v('ohs').s==='lo',sev:2,t:'Tu sentadilla overhead es solo el '+pq('ohs')+' de tu arranque: te cuesta sostener la recepción. Tiene que ser bastante más fuerte que tu arranque.',ej:['Sentadilla overhead','Sentadilla de arranque','Movilidad de hombros y tobillos']},
-  {has:has('hA'),on:v('hA').s==='lo',sev:1,t:'Tu '+nm('hA')+' casi no supera tu arranque ('+pq('hA')+'): falta fuerza de tirón.',ej:[EXN[vkey(r,'hA')],'Peso muerto de arranque']},
-  {has:false,on:v('hA').s==='hi'&&!aRec.length,sev:1,t:'Tiras mucho más de lo que arrancas ('+pq('hA')+'): el problema es la velocidad para meterse bajo la barra.',ej:['Arranque desde soportes bajos','Sentadilla de arranque']}],'Variantes del arranque equilibradas');
- // CLEAN
- const cRec=v('cpar').s==='hi'||v('cl').s==='hi',cPull=['csop','ccolg'].filter(k=>v(k).s==='hi'),cPow=['cpar','csop','ccolg'].filter(k=>v(k).s==='lo');
- fam('🪝','Clean: dónde se pierden los kilos',[
-  {has:has('cpar','cl'),on:cRec,sev:sv('cpar','cl'),t:(v('cpar').s==='hi'?'Recibes alto casi lo mismo que tu clean ('+nm('cpar')+' '+pq('cpar')+')':'Tu clean está muy cerca de tu sentadilla frontal ('+pq('cl')+')')+(v('cpar').s==='hi'&&v('cl').s==='hi'?' y tu clean está muy cerca de tu sentadilla frontal ('+pq('cl')+')':'')+': levantarte del clean te limita. Sube la sentadilla frontal.',ej:['Sentadilla frontal pesada','Clean + 2 sentadillas frontales','Frontal con pausa']},
-  {has:has('csop','ccolg'),on:cPull.length>0,sev:sv(...cPull),t:'Desde arriba levantas casi lo mismo o más que desde el piso ('+lst(['csop','ccolg'],'hi')+'): el primer tirón del clean te frena.',ej:['Clean con pausa bajo la rodilla',H[0].toUpperCase()+H.slice(1)+' de clean desde el piso','Peso muerto de clean']},
-  {has:false,on:cPow.length>0,sev:sv(...cPow),t:'Tus variantes de potencia del clean están bajas ('+lst(['cpar','csop','ccolg'],'lo')+'): falta explosividad en el tirón.',ej:[EXN[vkey(r,'cpar')]||'Clean parado','Clean colgante','Saltos']},
-  {has:has('hC'),on:v('hC').s==='lo',sev:1,t:'Tu '+nm('hC')+' casi no supera tu clean ('+pq('hC')+'): falta fuerza de tirón.',ej:[EXN[vkey(r,'hC')],'Peso muerto de clean']},
-  {has:false,on:v('cl').s==='lo',sev:1,t:'Tienes pierna de sobra para tu clean (es el '+pq('cl')+' de tu frontal): falta técnica y velocidad.',ej:['Clean colgante',EXN[vkey(r,'cpar')]||'Clean parado']}],'Variantes del clean equilibradas');
- // JERK
- fam('🚀','Jerk: dónde se pierden los kilos',[
-  {has:has('emp'),on:v('emp').s==='hi',sev:sv('emp'),t:'Tu '+nm('emp')+' es casi igual a tu jerk ('+pq('emp')+'): la tijera no te está dando kilos extra. Trabaja meterte más abajo y rápido con los pies.',ej:['Jerk con pausa en la recepción','Drills de pies de tijera','Jerk desde soportes']},
-  {has:false,on:v('emp').s==='lo',sev:1,t:'Tu '+nm('emp')+' está bajo ('+pq('emp')+'): falta potencia en el dip y el empuje de piernas.',ej:['Dip con pausa',EXN[vkey(r,'emp')],'Saltos']},
-  {has:has('pp'),on:v('pp').s==='lo',sev:1,t:'Tu '+nm('pp')+' está bajo ('+pq('pp')+'): falta fuerza de brazos y hombros para terminar arriba.',ej:[EXN[vkey(r,'pp')],'Press militar']},
-  {has:false,on:v('pp').s==='hi'&&v('emp').s!=='hi',sev:1,t:'Tu '+nm('pp')+' está muy cerca del jerk ('+pq('pp')+'): casi no bajas a recibir.',ej:['Jerk con pausa en la recepción','Drills de pies']},
-  {has:has('jdet'),on:v('jdet').s==='lo',sev:1,t:'Tu jerk por detrás está bajo ('+pq('jdet')+'): revisa la posición de la barra arriba y la movilidad de hombros.',ej:['Jerk por detrás','Movilidad torácica']},
-  {has:false,on:v('jdet').s==='hi',sev:1,t:'Por detrás levantas bastante más que por delante ('+pq('jdet')+'): la barra no está pasando vertical frente a la cara.',ej:['Jerk por delante con pausa en el dip','Jerk por delante desde soportes']}],'Variantes del jerk equilibradas');
- const jv=r[vkey(r,'jk')],cl=r[VK.cl],en=r[VK.env];
- if(en&&cl&&jv&&en<Math.min(cl,jv)*0.95)w(2,'🔗','El envión completo se queda atrás','Haces clean de '+fk(cl)+' y jerk de '+fk(jv)+' kg, pero tu envión es '+fk(en)+' kg: te cuesta pararte del clean y hacer el jerk enseguida.',['Clean + 2 jerks','Clean + sentadilla frontal + jerk','Sentadilla frontal']);
- const nVar=['apar','afza','acolg','asop','hA','ohs','cpar','ccolg','csop','hC','jdet','emp','pp'].filter(k=>r[vkey(r,k)]).length;
- if(nVar<3&&(r[VK.arr]||r[VK.env]))w(1,'🧩','Registra tus variantes','Con el PR de tus variantes (parado, colgante, soportes, '+H+'es, jerk por detrás, empuje, OHS) el análisis te muestra exactamente dónde se pierden tus kilos. Llevas '+nVar+' de 13.',[])}
-
 const RATIOS=[['arranque','envion','Arranque / Envión',78,84,'Arranque bajo respecto al envión: prioriza técnica de arranque.','Envión bajo respecto al arranque: revisa fuerza y jerk.'],
  ['envion','sfrontal','Envión / Sent. frontal',80,90,'Tienes fuerza que no se refleja en el envión: técnica o jerk.','El envión está cerca de tu fuerza máxima: más sentadilla frontal.'],
  ['arranque','strasera','Arranque / Sent. trasera',60,68,'Fuerza de sobra para el arranque: el límite es técnico.','Falta fuerza de piernas: más sentadilla.'],
@@ -1032,26 +987,62 @@ function badges(id){const a=S.athletes[id];if(!a)return[];const t=ymd();const sx
   T('Constancia','🧩','Variantes registradas',['arrparado','arrfza','arrsop','arrcolg','finarr','cleanparado','cleansop','cleancolg','ohs','jerkdet','empuje','pushpress','tarranque','tenvion','cargada','jerk'].filter(k=>r[k]).length,[2,4,6,8,12,16],n('movimientos'),'Registra el PR de tus variantes'),
   O('Especiales','🪪','Perfil completo',a.sex&&a.bw&&a.dob&&r.arranque&&r.envion,'Peso, fecha y RM completos','Completa peso, fecha y RM')]}
 /* Recomendaciones automáticas: puntos fuertes, en qué trabajar y próximas metas */
-function insights(id){const a=S.athletes[id];if(!a)return null;const r=a.rms||{};const t=ymd();const sx=a.sex==='F'?'F':'M';const pc=x=>Math.round(x*100)+'%';
+/* el análisis usa los mismos nombres que la app Halteros */
+const rAlias=r=>({...r,arrfuerza:r.arrfuerza??r.arrfza,arrsoporte:r.arrsoporte??r.arrsop,clinparado:r.clinparado??r.cleanparado,clinsoporte:r.clinsoporte??r.cleansop,clincolg:r.clincolg??r.cleancolg});
+function insights(id){const a=S.athletes[id];if(!a)return null;const r=rAlias(a.rms||{});const t=ymd();const sx=a.sex==='F'?'F':'M';const pc=x=>Math.round(x*100)+'%';
  const W=[],F=[];const w=(p,i,ti,d,ej)=>W.push({p,i,ti,d,ej});
  // datos faltantes
  const miss=[];if(!a.bw)miss.push('peso corporal');if(!r.arranque)miss.push('arranque');if(!r.envion)miss.push('envión');if(!r.sfrontal)miss.push('sentadilla frontal');if(!r.strasera)miss.push('sentadilla trasera');
  if(miss.length)w(miss.length>2?2:1,'📝','Completa tu perfil','Falta: '+miss.join(', ')+'. Con esos datos el análisis es mucho más preciso.',[]);
  // técnica vs fuerza
  if(r.arranque&&r.envion){const q=r.arranque/r.envion;
-  if(q<0.78)w(2,'🎯','Técnica de arranque','Tu arranque es el '+pc(q)+' de tu envión (lo ideal es 78–84%). Hay kilos “escondidos” en la técnica del arranque.',['Arranque colgante','Arranque desde soportes','Sentadilla de arranque','Arranque parado']);
+  if(q<0.78)w(2,'🎯','Técnica de arranque','Tu arranque es el '+pc(q)+' de tu envión (lo ideal es 78–84%). Hay kilos “escondidos” en la técnica del arranque.',['Arranque colgado','Arranque desde bloques','Snatch balance','Sentadilla overhead']);
   else if(q>0.84)w(2,'💥','Fuerza para el envión','Tu arranque es el '+pc(q)+' de tu envión (ideal 78–84%): tu envión está por debajo de lo que tu arranque permite.',['Sentadilla frontal','Clean + sentadilla frontal','Jerk desde soportes','Halón de clean']);
   else F.push('Arranque y envión equilibrados ('+pc(q)+')')}
  if(r.envion&&r.sfrontal){const q=r.envion/r.sfrontal;
   if(q>0.9)w(2,'🧱','Sentadilla frontal','Tu envión es el '+pc(q)+' de tu sentadilla frontal: la pierna te está limitando. Si sube la frontal, sube el envión.',['Sentadilla frontal pesada (3–5 reps)','Frontal con pausa','Clean + 2 frontales']);
   else if(q<0.8)w(1,'⚙️','Aprovechar tu fuerza en el envión','Tienes fuerza de pierna (envión '+pc(q)+' de la frontal); falta convertirla en técnica de clean y jerk.',['Clean colgante','Complejo clean + jerk','Jerk con pausa en el dip']);
   else F.push('Buena relación envión / sentadilla frontal')}
- if(r.cargada&&r.jerk){if(r.jerk<r.cargada*0.95)w(2,'🚀','El jerk limita tu envión','Haces clean de '+fk(r.cargada)+' kg pero tu jerk es '+fk(r.jerk)+' kg: pierdes kilos arriba.',['Jerk desde soportes','Empuje de fuerza','Dip con pausa','Estabilidad overhead']);
+ if(r.cargada&&r.jerk){if(r.jerk<r.cargada*0.95)w(2,'🚀','El jerk limita tu envión','Tu clean es de '+fk(r.cargada)+' kg y tu jerk de '+fk(r.jerk)+' kg. Pierdes kilos arriba.',['Jerk desde soportes','Empuje de fuerza','Dip con pausa','Estabilidad overhead']);
   else if(r.cargada<r.jerk*0.95)w(1,'🪝','El clean limita tu envión','Tu jerk ('+fk(r.jerk)+' kg) es más fuerte que tu clean ('+fk(r.cargada)+' kg).',['Clean desde bloques','Halón de clean','Sentadilla frontal']);
   else F.push('Clean y jerk parejos')}
- if(r.arranque&&r.strasera){const q=r.arranque/r.strasera;if(q<0.55)w(1,'⚡','Velocidad y técnica','Tu arranque es solo el '+pc(q)+' de tu sentadilla: fuerza tienes, falta velocidad bajo la barra.',['Arranque parado','Arranque colgante','Sentadilla de arranque']);else if(q>0.7)w(2,'🦵','Fuerza de piernas','Tu arranque es el '+pc(q)+' de tu sentadilla trasera: técnica muy buena, pero la fuerza base ya te está frenando.',['Sentadilla trasera 5×5','Sentadilla con pausa','Peso muerto rumano']);else F.push('Buena base de fuerza para el arranque')}
+ if(r.arranque&&r.strasera){const q=r.arranque/r.strasera;if(q<0.55)w(1,'⚡','Velocidad y técnica','Tu arranque es solo el '+pc(q)+' de tu sentadilla: fuerza tienes, falta velocidad bajo la barra.',['Arranque de potencia','Arranque colgado','Snatch balance']);else if(q>0.7)w(2,'🦵','Fuerza de piernas','Tu arranque es el '+pc(q)+' de tu sentadilla trasera: técnica muy buena, pero la fuerza base ya te está frenando.',['Sentadilla trasera 5×5','Sentadilla con pausa','Peso muerto rumano']);else F.push('Buena base de fuerza para el arranque')}
  if(r.sfrontal&&r.strasera){const q=r.sfrontal/r.strasera;if(q<0.8)w(1,'🧍','Posición y core en la frontal','Tu frontal es el '+pc(q)+' de tu trasera (ideal ~85%). Suele ser torso o espalda alta.',['Frontal con pausa','Remo / espalda alta','Core anti-flexión'])}
- varAnalysis(r,w,F);
+ if(r.tarranque&&r.arranque){const q=r.tarranque/r.arranque;if(q<1.05)w(1,'🧲','Fuerza de halón','Tu halón de arranque es casi igual a tu arranque. Más fuerza de halón da más margen.',['Halón de arranque','Peso muerto agarre arranque','Halón con pausa']);else if(q>1.3)w(1,'🤸','Recepción del arranque','Tiras mucho más de lo que arrancas ('+pc(q)+'): el problema está en meterse bajo la barra.',['Snatch balance','Arranque desde bloques bajos','Drop snatch'])}
+ if(r.pushpress&&r.jerk&&r.jerk/r.pushpress<1.15)w(1,'⬇️','Meterse bajo la barra en el jerk','Tu jerk es casi igual a tu empuje de fuerza: casi no estás bajando a recibir.',['Split jerk detrás de nuca','Jerk con pausa en la recepción','Drills de pies']);
+ // variantes: comparan cada movimiento con su levantamiento principal
+ const RR=(a1,b1,lo,hi,ok,low,high)=>{if(!a1||!b1)return;const q=a1/b1;if(q<lo/100)low&&w(low[0],low[1],low[2],low[3].replace('%q',pc(q)),low[4]);else if(q>hi/100)high&&w(high[0],high[1],high[2],high[3].replace('%q',pc(q)),high[4]);else if(ok)F.push(ok+' ('+pc(q)+')')};
+ const jk=r.jerkdel||r.jerk;
+ RR(r.arrfuerza,r.arranque,78,88,'Arranque de fuerza bien proporcionado',
+  [1,'🔋','Potencia en el arranque','Tu arranque de fuerza es el %q de tu arranque (ideal 78–88%). Te falta altura y velocidad en el halón: dependes mucho de meterte abajo.',['Arranque de fuerza','Halón de arranque explosivo','Arranque colgante de fuerza']],
+  [2,'⬇️','Meterte abajo en el arranque','Tu arranque de fuerza es el %q de tu arranque: tienes potencia de sobra, pero no la aprovechas recibiendo en sentadilla completa.',['Snatch balance','Sentadilla overhead (OHS)','Arranque con pausa abajo']]);
+ RR(r.arrparado,r.arranque,78,88,null,
+  [1,'🔋','Potencia (arranque parado)','Tu arranque parado es el %q de tu arranque. Más explosividad en la extensión te dará más margen.',['Arranque parado','Halón de arranque']],
+  [1,'⬇️','Recepción profunda','Tu arranque parado es el %q de tu arranque: recibir abajo te podría dar varios kilos más.',['Snatch balance','OHS','Drop snatch']]);
+ RR(r.clinparado,r.cargada,78,88,'Clean parado bien proporcionado',
+  [1,'🔋','Potencia en el clean','Tu clean parado es el %q de tu clean (ideal 78–88%). Falta potencia y altura en el halón.',['Clean parado','Halón de clean explosivo','Clean colgante de fuerza']],
+  [2,'⬇️','Meterte abajo en el clean','Tu clean parado es el %q de tu clean: tienes potencia, pero no la conviertes en una recepción profunda.',['Clean con pausa en la recepción','Sentadilla frontal','Tall clean']]);
+ RR(r.arrcolg,r.arranque,88,97,'Arranque colgante bien proporcionado',
+  [1,'🧷','Posición y segundo halón (arranque)','Tu arranque colgante es el %q de tu arranque (ideal 88–97%). Trabaja la posición de colgante y la extensión final.',['Arranque colgante','Arranque desde rodilla con pausa']],
+  [2,'🚦','Despegue (primer halón) del arranque','Tu arranque colgante es el %q de tu arranque: desde arriba levantas casi igual o más. Pierdes eficiencia en el despegue desde el piso.',['Halón de arranque con pausa bajo la rodilla','Arranque con pausa al despegue','Despegue lento controlado']]);
+ RR(r.clincolg,r.cargada,88,97,'Clean colgante bien proporcionado',
+  [1,'🧷','Posición y segundo halón (clean)','Tu clean colgante es el %q de tu clean (ideal 88–97%).',['Clean colgante','Clean desde rodilla con pausa']],
+  [2,'🚦','Despegue (primer halón) del clean','Tu clean colgante es el %q de tu clean: el problema está en el despegue desde el piso.',['Halón de clean con pausa','Clean con pausa bajo la rodilla']]);
+ RR(r.arrsoporte,r.arranque,93,102,'Arranque desde soportes bien proporcionado',
+  [1,'🧱','Posición de cadera (arranque)','Tu arranque desde soportes es el %q de tu arranque: desde los bloques pierdes fuerza. Trabaja la posición sobre la barra y el segundo halón.',['Arranque desde soportes','Halón de arranque desde soportes']],
+  [2,'🚦','Despegue del arranque','Tu arranque desde soportes es el %q de tu arranque: levantas más desde los bloques. El despegue desde el piso te está costando kilos.',['Arranque con pausa al despegue','Peso muerto de arranque','Halón de arranque desde el piso']]);
+ RR(r.clinsoporte,r.cargada,93,102,'Clean desde soportes bien proporcionado',
+  [1,'🧱','Posición de cadera (clean)','Tu clean desde soportes es el %q de tu clean.',['Clean desde soportes','Halón de clean desde soportes']],
+  [2,'🚦','Despegue del clean','Tu clean desde soportes es el %q de tu clean: levantas más desde los bloques. Pierdes kilos en el despegue.',['Clean con pausa al despegue','Peso muerto de clean']]);
+ RR(r.finarr,r.arranque,85,97,null,[1,'🎯','Final del arranque','Tu final de arranque es el %q de tu arranque. Trabaja la extensión completa y el «meterse» rápido.',['Final de arranque','Arranque alto colgante']],null);
+ RR(r.jerkdet,jk,100,110,'Jerk por detrás bien proporcionado',
+  [1,'🪨','Rack y empuje por delante','Tu jerk por detrás es el %q de tu jerk: normalmente es igual o mayor. Puede ser la posición de rack o la dirección del empuje por delante.',['Jerk por delante con pausa en el dip','Movilidad de muñecas y dorsales']],
+  [1,'🎯','Técnica del jerk por delante','Tu jerk por detrás supera bastante tu jerk (%q). La barra por delante se te va hacia adelante: cuida la trayectoria vertical.',['Jerk por delante desde soportes','Dip con pausa']]);
+ RR(r.empuje,jk,88,97,null,[1,'🦵','Empuje (deslizamiento)','Tu empuje es el %q de tu jerk. Mejorar el impulso de piernas te sube el jerk.',['Empuje (deslizamiento)','Dip + drive con pausa']],[1,'🦶','Pies del jerk','Tu empuje es casi igual a tu jerk (%q): no aprovechas el split. Practica la recepción en tijera.',['Split jerk detrás de nuca','Drills de pies']]);
+ RR(r.ohs,r.arranque,105,140,'Buena sentadilla overhead',[2,'🙆','Estabilidad arriba (OHS)','Tu sentadilla overhead es el %q de tu arranque: con eso te cuesta sostener la recepción. Necesita ser más fuerte que tu arranque.',['Sentadilla overhead','Snatch balance','Movilidad de hombros y tobillos']],null);
+ RR(r.tenvion,r.cargada,105,130,null,[1,'🧲','Fuerza de halón (clean)','Tu halón de clean es casi igual a tu clean: más fuerza de halón te da margen.',['Halón de clean','Peso muerto de clean']],[1,'🤸','Recepción del clean','Tiras mucho más de lo que limpias (%q): el problema está en meterte bajo la barra.',['Clean con pausa en la recepción','Tall clean']]);
+ const VAR=['arrfuerza','clinparado','arrcolg','clincolg','arrsoporte','clinsoporte','jerkdet','ohs'];const nv=VAR.filter(k=>r[k]).length;
+ if(r.arranque&&r.envion&&nv<3)w(1,'🧪','Registra tus variantes','Con tu arranque de fuerza, clean parado, colgantes, soportes, jerk por detrás y OHS, la app detecta exactamente qué te limita (potencia, posición, despegue, recepción o movilidad).',[]);
  // sensaciones y carga
  const wl=(a.wellness||[]).filter(x=>x.d>=addDays(t,-7));const avg=k=>wl.length?wl.reduce((n,x)=>n+(+x[k]||0),0)/wl.length:null;
  if(wl.some(x=>(x.dolor||0)>=5))w(3,'🩹','Ojo con el dolor','Registraste dolor alto esta semana. Avísale al profe antes de cargar pesado y no entrenes con dolor.',[]);
@@ -1060,7 +1051,7 @@ function insights(id){const a=S.athletes[id];if(!a)return null;const r=a.rms||{}
  const L=(a.lastLogs||[]).slice().sort((x,y)=>String(y.d).localeCompare(String(x.d)));const rp=L.slice(0,5).filter(l=>l.rpe);
  if(rp.length>=3&&rp.reduce((n,l)=>n+l.rpe,0)/rp.length>=9)w(2,'🌡️','Esfuerzo muy alto','Tus últimos entrenos promedian RPE 9 o más. Entrenar siempre al límite frena el progreso.',[]);
  const days=new Set(L.filter(l=>l.d>=addDays(t,-27)).map(l=>l.d)).size;const ac=0;
- if(days+ac<=4)w(2,'📅','Constancia','En las últimas 4 semanas registraste '+days+(days===1?' entreno':' entrenos')+(ac?' y '+ac+' asistencias':'')+'. Lo que más hace subir los kilos es entrenar seguido.',[]);else if(days>=10||ac>=10)F.push('Muy constante este mes 🔥');
+ if(days+ac<=4)w(2,'📅','Constancia','En las últimas 4 semanas registraste '+days+' entrenos'+(ac?' y '+ac+' asistencias':'')+'. Lo que más hace subir los kilos es entrenar seguido.',[]);else if(days>=10||ac>=10)F.push('Muy constante este mes 🔥');
  if(!L.some(l=>l.d>=addDays(t,-28)&&(l.v||0)>0)&&L.length)w(1,'🎥','Sube un video','Hace un mes que no subes videos. Un video del arranque o envión le permite al profe corregirte la técnica.',[]);
  // estancamiento
  ['arranque','envion'].forEach(ex=>{if(!r[ex])return;const h=(a.rmHist||[]).filter(x=>x.ex===ex&&x.d).sort((x,y)=>y.d.localeCompare(x.d))[0];if(h){const wk=Math.floor((Date.parse(t)-Date.parse(h.d))/6048e5);if(wk>=10)w(1,'📈','Sin RM de '+EXN[ex].toLowerCase()+' hace '+wk+' semanas','Puede ser momento de cambiar el estímulo: otras variantes, rangos de reps o un bloque de fuerza.',[])}});
@@ -1075,14 +1066,20 @@ function insights(id){const a=S.athletes[id];if(!a)return null;const r=a.rms||{}
 function insightsHTML(id){const R=insights(id);if(!R)return'';const me=id===S.me.id;const a=S.athletes[id]||{};const open=S.insOpen===id;const P={3:['Urgente','bad'],2:['Prioridad','warn'],1:['Sugerencia','blue']};
  let h=`<div class="card cc" style="--cc:#14b8a6"><h3>🎯 Recomendaciones${me?' para ti':' para '+esc((a.name||'').split(' ')[0])}</h3>`;
  if(R.F.length)h+=`<div class="sec-t">💪 Puntos fuertes</div><div style="margin-bottom:8px">${R.F.map(x=>`<span class="chip" style="border-color:var(--ok)">✓ ${x}</span>`).join('')}</div>`;
- const r=a.rms||{};const RAT=[['Arranque / Envión',r.arranque,r.envion,78,84],['Envión / Sentadilla frontal',r.envion,r.sfrontal,80,90],['Arranque / Sentadilla trasera',r.arranque,r.strasera,58,70],['Sent. frontal / Sent. trasera',r.sfrontal,r.strasera,80,90],['Jerk / Clean',r.jerk,r.cargada,95,105],...varRows(r)].filter(x=>x[1]&&x[2]);
+ const r=rAlias(a.rms||{});const RAT=[['Arranque / Envión',r.arranque,r.envion,78,84],['Envión / Sentadilla frontal',r.envion,r.sfrontal,80,90],['Arranque / Sentadilla trasera',r.arranque,r.strasera,58,70],['Sent. frontal / Sent. trasera',r.sfrontal,r.strasera,80,90],['Jerk / Clean',r.jerk,r.cargada,95,105],['Halón arranque / Arranque',r.tarranque,r.arranque,105,130],['Jerk / Empuje de fuerza',r.jerk,r.pushpress,115,135],
+  ['Arr. de fuerza / Arranque',r.arrfuerza,r.arranque,78,88],['Arr. parado / Arranque',r.arrparado,r.arranque,78,88],['Clean parado / Clean',r.clinparado,r.cargada,78,88],
+  ['Arr. colgante / Arranque',r.arrcolg,r.arranque,88,97],['Clean colgante / Clean',r.clincolg,r.cargada,88,97],
+  ['Arr. desde soportes / Arranque',r.arrsoporte,r.arranque,93,102],['Clean desde soportes / Clean',r.clinsoporte,r.cargada,93,102],
+  ['Jerk por detrás / Jerk',r.jerkdet,r.jerkdel||r.jerk,100,110],['Empuje / Jerk',r.empuje,r.jerkdel||r.jerk,88,97],
+  ['OHS / Arranque',r.ohs,r.arranque,105,140],['Halón de clean / Clean',r.tenvion,r.cargada,105,130]].filter(x=>x[1]&&x[2]);
  if(RAT.length){h+=`<div class="sec-t">📐 Tus proporciones</div><div style="margin-bottom:8px">${RAT.map(([n,x,y,lo,hi])=>{const v=Math.round(x/y*100);const ok=v>=lo&&v<=hi;const pos=Math.max(0,Math.min(100,(v-(lo-25))/((hi+25)-(lo-25))*100));const l1=(25/((hi+25)-(lo-25)))*100,l2=100-l1;
   return`<div style="padding:5px 0"><div class="row sp sm"><span>${n}</span><b style="color:${ok?'var(--ok)':'var(--warn)'}">${v}% ${ok?'✓':v<lo?'↓':'↑'}</b></div><div style="position:relative;height:8px;border-radius:9px;background:var(--card2);margin-top:3px"><div style="position:absolute;left:${l1}%;width:${l2-l1}%;top:0;bottom:0;background:rgba(46,204,113,.35);border-radius:9px"></div><div style="position:absolute;left:calc(${pos}% - 5px);top:-2px;width:10px;height:12px;border-radius:4px;background:${ok?'var(--ok)':'var(--warn)'}"></div></div><div class="xs mut">ideal ${lo}–${hi}%</div></div>`}).join('')}</div>`;
   const pot=[];if(r.envion&&r.arranque&&r.envion*0.81>r.arranque+1)pot.push(`Con tu envión, tu <b>arranque</b> podría andar cerca de <b>${fk(Math.round(r.envion*0.81))} kg</b> (+${fk(Math.round(r.envion*0.81-r.arranque))}).`);
   if(r.arranque&&r.envion&&r.arranque/0.81>r.envion+1)pot.push(`Con tu arranque, tu <b>envión</b> podría andar cerca de <b>${fk(Math.round(r.arranque/0.81))} kg</b> (+${fk(Math.round(r.arranque/0.81-r.envion))}).`);
   if(r.sfrontal&&r.envion&&r.sfrontal*0.85>r.envion+1)pot.push(`Con tu sentadilla frontal, tu <b>envión</b> podría llegar a <b>${fk(Math.round(r.sfrontal*0.85))} kg</b> (+${fk(Math.round(r.sfrontal*0.85-r.envion))}).`);
-  if(r.cargada&&r.jerk&&r.envion&&Math.min(r.cargada,r.jerk)>r.envion+1)pot.push(`Haces clean de ${fk(r.cargada)} y jerk de ${fk(r.jerk)} kg: tu <b>envión</b> podría ser <b>${fk(Math.min(r.cargada,r.jerk))} kg</b>.`);
-   
+  if(r.cargada&&r.jerk&&r.envion&&Math.min(r.cargada,r.jerk)>r.envion+1)pot.push(`Tu clean es de ${fk(r.cargada)} y tu jerk de ${fk(r.jerk)}: tu <b>envión</b> podría ser <b>${fk(Math.min(r.cargada,r.jerk))} kg</b>.`);
+  const P2=(v,f,lbl,base,cur)=>{if(v&&cur&&v*f>cur+1)pot.push(`Con tu ${lbl}, tu <b>${base}</b> podría andar cerca de <b>${fk(Math.round(v*f))} kg</b> (+${fk(Math.round(v*f-cur))}).`)};
+  P2(r.arrfuerza,1/0.84,'arranque de fuerza','arranque',r.arranque);P2(r.clinparado,1/0.84,'clean parado','clean',r.cargada);P2(r.arrcolg,1/0.93,'arranque colgante','arranque',r.arranque);P2(r.clincolg,1/0.93,'clean colgante','clean',r.cargada);P2(r.arrsoporte,1/0.97,'arranque desde soportes','arranque',r.arranque);P2(r.clinsoporte,1/0.97,'clean desde soportes','clean',r.cargada);P2(r.jerkdet,1/1.04,'jerk por detrás','jerk',r.jerkdel||r.jerk);
   if(pot.length)h+=`<div class="note sm" style="margin-bottom:10px">💡 ${pot.join('<br>💡 ')}</div>`}
  h+=`<div class="sec-t">🛠️ En qué trabajar</div>`;
  const list=open?R.W:R.W.slice(0,4);
