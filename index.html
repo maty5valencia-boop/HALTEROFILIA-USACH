@@ -327,7 +327,7 @@ const athleteList=()=>Object.entries(S.athletes).filter(([i,a])=>!S.owner||a.coa
 /* ===================== datos (Google Apps Script) ===================== */
 let LS={};let TOKEN=null;try{TOKEN=localStorage.getItem('usach-token')}catch(e){}
 /* Si la app está en GitHub Pages u otro sitio, pega aquí el link de tu implementación (termina en /exec) */
-const API_URL='PEGA_AQUI_EL_LINK_/exec';
+const API_URL='https://script.google.com/macros/s/AKfycbx2Uv9-vNaHWplXYK5YTVKF_pRVlrJMipPEsZfUJbiPD0scqs-i-JT2LJjxaijG49c59w/exec';
 function call(action,args){
  if(window.google&&google.script&&google.script.run)return new Promise((res,rej)=>{google.script.run.withSuccessHandler(s=>{let r;try{r=JSON.parse(s)}catch(e){return rej({code:'server',message:'Respuesta inválida del servidor'})}r.ok?res(r.data):rej({code:'server',message:r.error})}).withFailureHandler(e=>rej({code:'net',message:String((e&&e.message)||e)})).api(action,TOKEN,args||{})});
  if(!/^https:\/\/script\.google\.com\/.+\/exec/.test(API_URL))return Promise.reject({code:'net',message:'Falta pegar el link /exec de Apps Script en API_URL (dentro de index.html).'});

@@ -1,0 +1,16 @@
+{
+  "name": "Halterofilia USACH",
+  "short_name": "Halterofilia USACH",
+  "description": "Planis, marcas, videos, ranking y competencias del equipo de Halterofilia USACH.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#03193a",
+  "theme_color": "#042f61",
+  "lang": "es-CL",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
