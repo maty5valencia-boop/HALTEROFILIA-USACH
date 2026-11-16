@@ -413,7 +413,7 @@ function tabsFor(){return role()==='coach'?[['team','Equipo'],['plans','Planis']
 const moreTabs=()=>role()==='coach'?['more','cal','tools']:['more','cal','tools','profile'];
 function render(){
  $('#hdr').innerHTML=`<div class="brand row" style="gap:7px"><span style="width:38px;display:flex">${LOGO}</span><span>HALTEROFILIA <b>USACH</b></span></div><div class="f1">${S.me.id?`<span class="pill ${role()==='coach'?'acc':'blue'}">${role()==='coach'?'Profe':'Atleta'}</span>`:''}</div>${S.ready&&S.me.id&&isCoach()?`<button class="btn sm sec" title="Cambiar vista" onclick="A.toggleRole()">⇄ ${role()==='coach'?'Atleta':'Profe'}</button>`:''}<button class="ib" title="Cambiar diseño" onclick="A.theme()">🎨</button>${S.me.id?`<button class="btn sm ghost" onclick="A.logout()">Salir</button>`:''}`;
- $('#nav').innerHTML=S.ready&&S.me.id?tabsFor().map(([k,l])=>k==='fab'?`<button class="fab" onclick="${role()==='coach'?'A.newPlan()':'A.logNew()'}" title="${role()==='coach'?'Subir plani':'Registrar entrenamiento'}"><img src="${LOGO_SRC}" alt="USACH">${role()==='coach'?'Subir':'Registrar'}</button>`:`<button style="--tc:${({home:'#f07c1f',team:'#f07c1f',plans:'#4f8fe8',rank:'#ffb347',more:'#1fb5b0'})[k]}" class="${!S.view&&(S.tab===k||(k==='more'&&moreTabs().includes(S.tab)))?'on':''}" onclick="A.tab('${k}')">${svg(k)}${l}</button>`).join(''):'';
+ $('#nav').innerHTML=S.ready&&S.me.id?tabsFor().map(([k,l])=>k==='fab'?`<button class="fab" onclick="${role()==='coach'?'A.newPlan()':'A.regStart()'}" title="${role()==='coach'?'Subir plani':'Registrar entrenamiento'}"><img src="${LOGO_SRC}" alt="USACH">${role()==='coach'?'Subir':'Registrar'}</button>`:`<button style="--tc:${({home:'#f07c1f',team:'#f07c1f',plans:'#4f8fe8',rank:'#ffb347',more:'#1fb5b0'})[k]}" class="${!S.view&&(S.tab===k||(k==='more'&&moreTabs().includes(S.tab)))?'on':''}" onclick="A.tab('${k}')">${svg(k)}${l}</button>`).join(''):'';
  $('#app').innerHTML=S.ready?view():'<div class="loading">Cargando…</div>'}
 function softRender(){if(!S.ready)return;const ae=document.activeElement;if(ae&&$('#app').contains(ae)&&/INPUT|TEXTAREA|SELECT/.test(ae.tagName)){if(!S._pend){S._pend=true;ae.addEventListener('blur',()=>{S._pend=false;setTimeout(render,0)},{once:true})}return}render()}
 function view(){let h='';
@@ -514,8 +514,8 @@ function vProfile(id,coachMode){const a=S.athletes[id];if(!a)return'';const step
  h+=`<div class="card cc" style="--cc:#ec4899"><div class="row sp"><h3>Entrenamientos</h3>${!coachMode?`<button class="btn sm sec" onclick="A.logNew()">+ Registrar</button>`:''}</div>${S.logsUid!==id||!S.logsLoaded?'<div class="mut sm">Cargando…</div>':logsHTML(id,coachMode)}</div>`;
  return h}
 function logsHTML(id,coachMode){const L=Object.entries(S.logs).sort((x,y)=>(y[1].d||'').localeCompare(x[1].d||'')||(y[1].ts||0)-(x[1].ts||0)).slice(0,25);if(!L.length)return'<div class="mut sm">Sin entrenamientos registrados.</div>';
- return L.map(([lid,l])=>`<div class="li" style="display:block"><div class="row sp"><b>${fmtD(l.d,{weekday:'short',day:'numeric',month:'short'})} · ${esc(l.sName||'Entrenamiento')}</b>${!coachMode?`<button class="btn sm ghost" onclick="A.logEdit('${lid}')">Editar</button>`:''}</div>
-  <div class="sm">${(l.rows||[]).filter(r=>r.name).map(r=>`<span class="chip">${esc(r.name)} <b class="kg">${fk(r.kg)}</b>${r.reps?'×'+r.reps:''}${r.sets>1?'×'+r.sets:''}${r.rpe?` <span class="mut">RPE ${r.rpe}</span>`:''}${r.miss?` <span style="color:var(--bad)">${r.miss} fallo${r.miss>1?'s':''}</span>`:''}</span>`).join('')}</div>
+ return L.map(([lid,l])=>`<div class="li" style="display:block"><div class="row sp"><b>${fmtD(l.d,{weekday:'short',day:'numeric',month:'short'})} · ${esc(l.sName||'Entrenamiento')}${l.mode==='plan'?` <span class="pill ${l.pct>=90?'ok':l.pct>=60?'warn':'bad'}">${l.pct}% cumplido</span>`:''}</b>${!coachMode?`<button class="btn sm ghost" onclick="A.logEdit('${lid}')">Editar</button>`:''}</div>
+  <div class="sm">${l.mode==='plan'&&l.items?l.items.map(x=>`<span class="chip">${x.st?PST[x.st][0]:'·'} ${esc(x.name)}${(x.st==='up'||x.st==='down')&&x.kg?` <b class="kg">${fk(x.kg)}</b>`:''}</span>`).join('')+(l.rpe?` <span class="chip">RPE ${l.rpe}</span>`:''):(l.rows||[]).filter(r=>r.name).map(r=>`<span class="chip">${esc(r.name)} <b class="kg">${fk(r.kg)}</b>${r.reps?'×'+r.reps:''}${r.sets>1?'×'+r.sets:''}${r.rpe?` <span class="mut">RPE ${r.rpe}</span>`:''}${r.miss?` <span style="color:var(--bad)">${r.miss} fallo${r.miss>1?'s':''}</span>`:''}</span>`).join('')}</div>
   ${l.nota?`<div class="sm mut" style="margin-top:4px">“${esc(l.nota)}”</div>`:''}
   ${(l.videos||[]).map(v=>{const id=encodeURIComponent(v.drive||'');return v.drive?`<div class="vbox" id="vb_${esc(v.drive)}"><button class="btn sec full" style="margin-top:6px;padding:16px" onclick="A.driveVid('${id}')">▶ Ver video${v.name?' · '+esc(v.name):''}</button></div><div class="xs mut" style="margin-top:3px">¿Se corta? Prueba el <a href="javascript:void 0" onclick="A.playVid('${id}')" style="color:var(--acc)">reproductor alternativo</a> o <a href="https://drive.google.com/file/d/${id}/view" target="_blank" rel="noopener" style="color:var(--acc)">ábrelo en Drive</a>.</div>`:`<video controls preload="metadata" playsinline src="${esc(srcOf(v))}"></video>`}).join('')}
   ${(l.coachNotes||[]).map(n=>`<div class="note"><span class="xs" style="opacity:.7">Profe · ${fmtD(n.d)}</span><br>${esc(n.text)}</div>`).join('')}
@@ -635,6 +635,7 @@ function closeModal(){S.modal=null;renderModal()}
 function renderModal(){const el=$('#modal');if(!S.modal){el.innerHTML='';return}const st=el.querySelector('.modal')?.scrollTop||0;el.innerHTML=`<div class="modal-bg" onclick="if(event.target===this)A.closeModal()"><div class="modal">${modalBody()}</div></div>`;const m=el.querySelector('.modal');if(m)m.scrollTop=st}
 const scaleBtns=(key,from,to)=>`<div class="scale">${Array.from({length:to-from+1},(_,i)=>i+from).map(n=>`<button class="${S.modal.v[key]===n?'on':''}" onclick="S.modal.v['${key}']=${n};renderModal()">${n}</button>`).join('')}</div>`;
 function modalBody(){const m=S.modal,v=m.v;
+ if(m.t==='plog')return plogBody(m,v);if(m.t==='pres')return presBody(v);if(m.t==='regPick')return regPickBody(v);
  if(m.t==='profile')return`<h2>${m.isNew?'Nuevo atleta':v.uid===S.me.id?'Mi perfil':'Perfil del atleta'}</h2>
   <label>Nombre y apellido</label><input value="${esc(v.name)}" oninput="S.modal.v.name=this.value;const u=$('#usrtxt');if(u)u.textContent=this.value||'…'">
   <label>WhatsApp (opcional)</label><input type="tel" inputmode="tel" value="${esc(v.phone||'')}" placeholder="+56 9 1234 5678" oninput="S.modal.v.phone=this.value.trim()">
@@ -738,7 +739,7 @@ A.logNew=(planId)=>{if(needProfile())return;openModal({t:'log',v:{id:uid(),d:ymd
 A.logFrom=(pid,si)=>{if(needProfile())return;const lid=pid+'_'+si;if(S.logs[lid])return A.logEdit(lid);const p=S.plans[pid];const s=p.sessions[si];const a=myA();
  const rows=(s.items||[]).map(it=>{const t=parseScheme(it.scheme);const top=t.slice().sort((x,y)=>y.pct-x.pct)[0];return{name:it.name,base:detectEx(it.name)||it.base,kg:top&&it.base?kgOf(a,it.base,top.pct):null,reps:top?top.reps:null,sets:top?top.sets:1,rpe:null,miss:0}});
  openModal({t:'log',v:{id:lid,d:ymd(),planId:pid,s:si,sName:(p.title?p.title+' · ':'')+(s.name||'Sesión '+(si+1)),rows,nota:'',videos:[]}})};
-A.logEdit=lid=>{const l=S.logs[lid];if(!l)return;openModal({t:'log',existing:true,v:clone(l)})};
+A.logEdit=lid=>{const l=S.logs[lid];if(!l)return;if(l.mode==='plan'&&S.plans[l.planId]&&S.plans[l.planId].weekly&&l.di!=null)return A.regDay(l.planId,l.di);openModal({t:'log',existing:true,v:clone(l)})};
 A.lr=(i,k,val)=>{const r=S.modal.v.rows[i];if(k==='name'){r.name=val;r.base=detectEx(val)}else r[k]=num(val);const el=$('#pr'+i);if(el)el.innerHTML=prTxt(r,myA())};
 A.vidIn=async inp=>{const f=inp.files[0];inp.value='';if(!f)return;if(f.size>30*1024*1024)return toast('El video pesa más de 30 MB. Recórtalo o grábalo en 1080p en vez de 4K.');S.uploading=true;renderModal();try{const r=await upload(f,(i,n)=>{S.uploading=i<n?`Subiendo video… ${Math.round(i/n*100)}%`:'Guardando video…';renderModal()});S.modal&&S.modal.v.videos.push(r);toast('Video subido')}catch(e){errToast(e)}S.uploading=false;renderModal()};
 A.saveLog=async()=>{const v=clone(S.modal.v);v.rows=v.rows.filter(r=>r.name&&r.name.trim());if(!v.rows.length)return toast('Agrega al menos un ejercicio');const a=clone(myA());const prs=[];
@@ -1282,10 +1283,10 @@ function wkSecs(d,a,img){const ch=(t,cls)=>`<span class="wch${cls?' '+cls:''}">$
   return h||'<div class="mut sm">Descanso</div>'}
 function wkView(id,p,a){const w=p.weekly;const c=role()==='coach';let si=0;const days=w.days.map((d,i)=>({...d,i,si:d.olim.length?si++:null}));
   const today=p.week?Math.round((dt(ymd())-dt(p.week))/864e5):-1;if(S.wkFor!==id){S.wkFor=id;S.wkDay=today>=0&&today<days.length?today:0}
-  const d=days[Math.min(S.wkDay,days.length-1)];const done=d.si!=null&&!c&&a&&(a.lastLogs||[]).some(l=>l.planId===id&&l.s===d.si);
+  const d=days[Math.min(S.wkDay,days.length-1)];const dl=!c?Object.values(S.logs).find(l=>l.planId===id&&(l.di===d.i||(d.si!=null&&l.s===d.si))):null;const done=!!dl;
   return`<div class="card cc" style="--cc:#f07c1f"><div class="row sp"><div class="sec-t" style="margin:0">Plani semanal${wkRange(p)?' · '+wkRange(p):''}</div></div>
   <div class="tabs" style="margin-top:8px">${days.map(x=>`<button class="${x.i===d.i?'on':''}" onclick="S.wkDay=${x.i};render()">${x.name.slice(0,3)}${p.week?' '+dt(addDays(p.week,x.i)).getDate():''}</button>`).join('')}</div>
-  <div class="row sp" style="margin:4px 0 8px"><h3 style="margin:0">${d.name[0]+d.name.slice(1).toLowerCase()} ${wkDate(p,d.i)}</h3>${!c&&d.si!=null?`<button class="btn sm ${done?'sec':''}" onclick="A.logFrom('${id}',${d.si})">${done?'✓ Registrado':'Registrar'}</button>`:''}</div>
+  <div class="row sp" style="margin:4px 0 8px"><h3 style="margin:0">${d.name[0]+d.name.slice(1).toLowerCase()} ${wkDate(p,d.i)}</h3>${!c?`<button class="btn sm ${done?'sec':''}" onclick="A.regDay('${id}',${d.i})">${done?'✓ '+(dl.pct!=null?dl.pct+'%':'Registrado'):'Registrar'}</button>`:''}</div>
   <div class="wk">${wkSecs(d,a)}</div>
   <div class="row wrap" style="margin-top:10px;gap:8px"><button class="btn f1" onclick="A.wkImg('${id}')">📷 Imagen de la semana</button></div>
   <div class="xs mut" style="margin-top:6px">Halterofilia: % del RM · series × reps${a&&a.rms&&Object.keys(a.rms).length?' · kilos calculados con los RM de '+esc(a.name):''}. Halón de clean usa tu RM de clean (o de envión si no lo tienes).</div></div>`}
@@ -1302,6 +1303,76 @@ A.wkImg=async id=>{const p=S.plans[id];if(!p||!p.weekly)return;const c=role()===
    if(navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:'Plani semanal'});return}catch(e){if(e&&e.name==='AbortError')return}}
    const u=URL.createObjectURL(blob);const l=document.createElement('a');l.href=u;l.download=name;document.body.appendChild(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);toast('Imagen descargada 📷')}
   catch(e){toast(e.message||'No se pudo generar la imagen')}};
+
+/* ===================== registro de la plani por día (Hecho / Subí / Bajé / No) ===================== */
+const PST={ok:['✅','Hecho'],up:['⬆️','Subí'],down:['⬇️','Bajé'],no:['❌','No']};
+const curWeekly=()=>{const L=sortedPlans().filter(([id,p])=>p.weekly&&p.weekly.days&&planVisible(p,S.me.id));const m=mondayOf(ymd());return L.find(([id,p])=>p.week===m)||L.find(([id,p])=>p.week<=m)||L[0]||null};
+function wkDaysOf(p){let si=0;return p.weekly.days.map((d,i)=>({...d,i,si:d.olim.length?si++:null}))}
+function plogItems(p,d,a){const out=[];
+  (d.jump||[]).forEach(g=>g.items.forEach(it=>out.push({sec:'Saltos y estabilización',name:it.name,base:detectEx(it.name),plan:it.sr+(it.kg?' · '+it.kg:''),pkg:num(String(it.kg||'').split('/').pop())})));
+  (d.est||[]).forEach(e=>out.push({sec:'Saltos y estabilización',name:e.name,base:null,plan:(e.s?e.s+' series':'')+(e.note?' · '+e.note.replace(/X/g,'×'):''),pkg:null}));
+  (d.olim||[]).forEach(o=>{const top=o.sets.reduce((m,x)=>x.p>m.p?x:m,o.sets[0]);out.push({sec:'Halterofilia',name:o.name.replace(/\s*\+\s*/g,' + '),base:detectEx(o.name)||o.base,kgBase:o.base,plan:o.sets.map(x=>x.p+'% '+x.s+'×'+x.r).join(' · '),topP:top.p,reps:top.r,sets:top.s,pkg:wkKg(a,o.base,top.p)})});
+  (d.musc||[]).forEach(g=>g.items.forEach(it=>out.push({sec:'Musculación',name:it.name,base:detectEx(it.name),plan:it.sr+(it.kg?' · '+it.kg:''),pkg:num(String(it.kg||'').replace(/kg/i,'').split('/').pop())})));
+  return out.map(x=>({...x,st:null,kg:null}))}
+A.regStart=()=>{if(needProfile())return;const cw=curWeekly();if(!cw)return A.logNew();const[id,p]=cw;openModal({t:'regPick',v:{id}})};
+A.regDay=(id,i)=>{const p=S.plans[id];if(!p||!p.weekly)return;const a=myA();const days=wkDaysOf(p);const d=days[i];const lid=id+'_d'+i;const ex=S.logs[lid]||(d.si!=null?S.logs[id+'_'+d.si]:null);
+  let items=plogItems(p,d,a);if(ex&&ex.mode==='plan'&&ex.items){const by={};ex.items.forEach(x=>by[x.name]=x);items=items.map(x=>by[x.name]?{...x,st:by[x.name].st,kg:by[x.name].kg}:x)}
+  openModal({t:'plog',existing:!!(ex&&ex.mode==='plan'),v:{id:ex&&ex.mode==='plan'?ex.id:lid,pid:id,di:i,s:d.si,d:p.week?addDays(p.week,i):ymd(),sName:wkCap(d.name)+' '+(p.week?dt(addDays(p.week,i)).getDate():'')+(p.title?' · '+p.title:''),items,rpe:ex&&ex.mode==='plan'?ex.rpe:null,nota:ex&&ex.mode==='plan'?ex.nota||'':'',videos:ex&&ex.mode==='plan'?ex.videos||[]:[]}})};
+A.pst=(i,st)=>{const it=S.modal.v.items[i];it.st=it.st===st?null:st;if((st==='up'||st==='down')&&it.kg==null)it.kg=it.pkg;renderModal()};
+A.pkg=(i,val)=>{S.modal.v.items[i].kg=num(val)};
+A.pall=()=>{S.modal.v.items.forEach(it=>{if(!it.st)it.st='ok'});renderModal()};
+A.pDetail=()=>{const v=S.modal.v;if(v.s==null)return toast('Este día no tiene halterofilia para registrar en detalle');closeModal();A.logFrom(v.pid,v.s)};
+function plogBody(m,v){const a=myA();let sec='';const left=v.items.filter(x=>!x.st).length;
+  let h=`<h2>${esc(v.sName)}</h2><div class="sm mut">Marca cómo te fue en cada movimiento.${a&&a.rms&&Object.keys(a.rms).length?' Los kilos salen de tus PR.':''}</div>
+  <div class="row" style="margin:10px 0 4px;gap:8px"><button class="btn f1" onclick="A.pall()">✅ Hice todo</button><input type="date" value="${esc(v.d)}" style="width:auto" oninput="S.modal.v.d=this.value"></div>`;
+  v.items.forEach((it,i)=>{if(it.sec!==sec){sec=it.sec;h+=`<div class="sec-t" style="margin-top:12px">${esc(sec)}</div>`}
+    h+=`<div class="card in" style="margin-bottom:6px;${it.st==='no'?'opacity:.7':''}"><div class="row sp" style="gap:6px;align-items:flex-start"><div class="f1"><div class="b">${esc(it.name)}</div><div class="xs mut">${esc(it.plan||'')}${it.pkg?` · <b class="kg">${fk(it.pkg)} kg</b>`:''}</div></div></div>
+    <div class="seg" style="margin-top:6px">${Object.entries(PST).map(([k,[ic,t]])=>`<button class="${it.st===k?'on':''}" onclick="A.pst(${i},'${k}')">${ic} ${t}</button>`).join('')}</div>
+    ${it.st==='up'||it.st==='down'?`<div class="row" style="margin-top:6px;gap:8px"><span class="sm">${it.st==='up'?'Llegué hasta':'Llegué hasta'}</span><input type="number" inputmode="decimal" step="0.5" style="width:110px" value="${esc(it.kg??'')}" oninput="A.pkg(${i},this.value)"><span class="sm">kg</span></div>`:''}</div>`});
+  h+=`<label>RPE de la sesión · esfuerzo percibido</label><div class="scale">${[6,7,8,9,10].map(n=>`<button class="${v.rpe===n?'on':''}" onclick="S.modal.v.rpe=${n};renderModal()">${n}</button>`).join('')}</div>
+  <div class="xs" style="margin-top:5px">${v.rpe?`<b>RPE ${v.rpe}:</b> ${RPE_TXT[v.rpe]}`:'<span class="mut">¿Qué tan pesada se sintió la sesión en general?</span>'}</div>
+  <label>Comentario</label><textarea rows="2" placeholder="¿Cómo te sentiste?" oninput="S.modal.v.nota=this.value">${esc(v.nota)}</textarea>
+  <label>Video para el profe</label><span class="btn sec file">🎥 Subir video<input type="file" accept="video/*" onchange="A.vidIn(this)"></span>${S.uploading?` <span class="sm" style="color:var(--acc2)">${typeof S.uploading==='string'?S.uploading:'Subiendo…'}</span>`:''}
+  ${(v.videos||[]).map((x,i)=>`<div class="row sp sm" style="margin-top:6px"><span>🎥 ${esc(x.name||'video')}</span><button class="btn sm ghost" onclick="S.modal.v.videos.splice(${i},1);renderModal()">Quitar</button></div>`).join('')}
+  ${left?`<div class="xs mut" style="margin-top:10px">Te faltan ${left} movimiento${left>1?'s':''} por marcar.</div>`:''}
+  <div class="row" style="margin-top:12px"><button class="btn f1" onclick="A.savePlog()">Guardar</button>${m.existing?`<button class="btn danger" onclick="A.delLog()">${S.confirm==='dl'?'¿Seguro?':'Borrar'}</button>`:''}<button class="btn ghost" onclick="A.closeModal()">Cancelar</button></div>
+  ${v.s!=null?`<div class="sm" style="text-align:center;margin-top:10px"><a href="javascript:void 0" onclick="A.pDetail()" style="color:var(--acc)">Registrar series en detalle</a></div>`:''}`;
+  return h}
+A.savePlog=async()=>{const v=clone(S.modal.v);const marked=v.items.filter(x=>x.st);if(!marked.length)return toast('Marca al menos un movimiento (o toca «Hice todo»)');
+  if(v.items.some(x=>(x.st==='up'||x.st==='down')&&!x.kg))return toast('Escribe hasta cuántos kilos llegaste');
+  const a=clone(myA());const prs=[];let nl=0,ton=0,ip=0,iw=0;
+  v.rows=v.items.filter(x=>x.st&&x.st!=='no').map(x=>{const kg=x.st==='ok'?x.pkg:x.kg;return{name:x.name,base:x.base,kg:kg||null,reps:x.reps||null,sets:x.sets||1,rpe:v.rpe||null,miss:0,st:x.st}});
+  v.rows.forEach(r=>{const reps=r.reps||0,sets=r.sets||1;nl+=reps*sets;if(r.kg)ton+=r.kg*reps*sets});
+  v.items.filter(x=>x.st==='ok'&&x.kgBase&&x.topP).forEach(x=>{ip+=x.topP*(x.reps||1)*(x.sets||1);iw+=(x.reps||1)*(x.sets||1)});
+  v.items.filter(x=>x.st==='up'&&x.base&&x.kg).forEach(x=>{const rm=a.rms?.[x.base];if(!rm||x.kg>rm){a.rms=a.rms||{};a.rms[x.base]=x.kg;a.rmHist=a.rmHist||[];addHist(a.rmHist,{ex:x.base,kg:x.kg,d:v.d},'ex');prs.push(EXN[x.base]+' '+fk(x.kg)+' kg')}});
+  const done=v.items.filter(x=>x.st&&x.st!=='no').length;v.pct=Math.round(done/v.items.length*100);v.mode='plan';v.planId=v.pid;v.ts=v.ts||Date.now();v.prs=prs;
+  const rec={id:v.id,d:v.d,planId:v.pid,s:v.s??null,di:v.di,mode:'plan',sName:v.sName,items:v.items.map(({name,base,plan,pkg,st,kg,sec})=>({name,base,plan,pkg,st,kg,sec})),rows:v.rows,pct:v.pct,rpe:v.rpe||null,nota:v.nota||'',videos:v.videos||[],ts:v.ts,prs};
+  if(S.modal.existing&&S.logs[v.id])rec.coachNotes=S.logs[v.id].coachNotes;
+  if(!(await put('athletes/'+S.me.id+'/logs/'+v.id,rec)))return;
+  a.lastLogs=(a.lastLogs||[]).filter(l=>l.id!==v.id);a.lastLogs.push({id:v.id,d:v.d,planId:v.pid,s:v.s??null,nl,ton:Math.round(ton),int:iw?Math.round(ip/iw):null,rpe:v.rpe||null,v:(v.videos||[]).length,pct:v.pct});
+  a.lastLogs=a.lastLogs.sort((x,y)=>x.d.localeCompare(y.d)).slice(-80);a.rmHist=(a.rmHist||[]).slice(-300);
+  if(await put('athletes/'+S.me.id,a)){openModal({t:'pres',v:{rec}});render()}};
+function presBody(v){const r=v.rec;const it=r.items;const by=k=>it.filter(x=>x.st===k);const up=by('up'),dn=by('down'),no=by('no'),un=it.filter(x=>!x.st);const pct=r.pct;
+  const col=pct>=90?'var(--ok)':pct>=60?'var(--warn)':'var(--bad)';const tips=[];
+  if(r.prs&&r.prs.length)tips.push('🎉 <b>Nuevo PR</b>: '+r.prs.map(esc).join(', ')+'. Ya quedó actualizado en tu perfil.');
+  if(pct===100&&!up.length&&!dn.length)tips.push('💪 Hiciste la sesión completa tal como estaba planificada.');
+  if(up.length)tips.push('⬆️ Subiste el peso en <b>'+up.map(x=>esc(x.name)).join(', ')+'</b>. Avísale al profe para que ajuste tus %.');
+  if(dn.length)tips.push('⬇️ Bajaste en <b>'+dn.map(x=>esc(x.name)).join(', ')+'</b>. Si fue por técnica, dolor o cansancio, coméntaselo al profe.');
+  if(no.length)tips.push('❌ No hiciste <b>'+no.map(x=>esc(x.name)).join(', ')+'</b>.'+(no.length>=3?' Si te faltó tiempo, prioriza la halterofilia y la sentadilla.':''));
+  if(r.rpe>=9&&pct>=80)tips.push('🌡️ Sesión muy exigente (RPE '+r.rpe+'). Cuida el sueño y la comida para recuperar.');
+  if(r.rpe&&r.rpe<=6&&up.length)tips.push('🪶 Te sentiste liviano/a y subiste kilos: puede que tus PR estén desactualizados. Revisa tu perfil.');
+  if(r.rpe>=9&&dn.length)tips.push('🔋 Bajaste kilos con RPE alto: puede ser fatiga acumulada. Coméntaselo al profe.');
+  const p=S.plans[r.planId];if(p&&p.weekly){const n=p.weekly.days.length;const reg=new Set(Object.values(S.logs).filter(l=>l.planId===r.planId&&l.mode==='plan').map(l=>l.di));reg.add(r.di);tips.push(`📅 Llevas ${reg.size} de ${n} días de la semana registrados.`)}
+  return`<h2>Análisis · ${esc(r.sName)}</h2><div class="row" style="gap:14px;margin:8px 0 12px"><span class="big" style="color:${col}">${pct}%</span><div class="sm mut">cumplido<br>${it.length-no.length-un.length} de ${it.length} movimientos${r.rpe?' · RPE '+r.rpe:''}</div></div>
+  <div class="prog" style="margin-bottom:12px"><i style="width:${pct}%;background:${col}"></i></div>
+  <div class="tblwrap"><table class="x"><tr><th>Movimiento</th><th>Resultado</th></tr>${it.map(x=>`<tr><td>${esc(x.name)}</td><td>${x.st==='ok'?'✅ Hecho'+(x.pkg?' · '+fk(x.pkg)+' kg':''):x.st==='up'?'⬆️ Subió a '+fk(x.kg)+' kg':x.st==='down'?'⬇️ Bajó a '+fk(x.kg)+' kg':x.st==='no'?'❌ No lo hizo':'<span class="mut">Sin marcar</span>'}</td></tr>`).join('')}</table></div>
+  ${tips.length?`<div class="note sm" style="margin-top:12px;line-height:1.5">${tips.join('<br>')}</div>`:''}
+  <button class="btn full" style="margin-top:14px" onclick="A.closeModal()">Listo</button>`}
+function regPickBody(v){const p=S.plans[v.id];const days=wkDaysOf(p);const t=ymd();
+  return`<h2>¿Qué día vas a registrar?</h2><div class="sm mut" style="margin-bottom:10px">${esc(p.title||'Plani')}${wkRange(p)?' · '+wkRange(p):''}</div>
+  ${days.map(d=>{const ds=p.week?addDays(p.week,d.i):'';const lg=Object.values(S.logs).find(l=>l.planId===v.id&&(l.di===d.i||(d.si!=null&&l.s===d.si)));
+   return`<button class="btn ${ds===t?'':'sec'} full" style="margin-bottom:6px;display:flex;justify-content:space-between" onclick="A.regDay('${v.id}',${d.i})"><span>${wkCap(d.name)} ${ds?dt(ds).getDate():''}${ds===t?' · hoy':''}</span><span>${lg?(lg.pct!=null?'✓ '+lg.pct+'%':'✓'):''}</span></button>`}).join('')}
+  <button class="btn ghost full" style="margin-top:6px" onclick="A.closeModal();A.logNew()">Entrenamiento libre (sin plani)</button>`}
 
 boot();
 </script>
